@@ -5,26 +5,26 @@ import javax.sql.DataSource;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.io.IOException;
-import java.io.InputStream;
+
 import java.io.PrintWriter;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
-import java.util.Properties;
+import java.util.ResourceBundle;
 import java.util.logging.Logger;
 
 @Getter
 @Setter
 public class CustomDataSource implements DataSource {
-
     private static volatile CustomDataSource instance;
     private final String driver;
     private final String url;
     private final String name;
     private final String password;
 
-    public CustomDataSource(String driver, String url, String name, String password) {
+    private CustomDataSource(String driver, String url, String password,
+                             String name) {
         this.driver = driver;
         this.url = url;
         this.name = name;
@@ -33,31 +33,29 @@ public class CustomDataSource implements DataSource {
 
     public static CustomDataSource getInstance() {
         if (instance == null) {
-            try {
-                Properties props = new Properties();
-                ClassLoader loader = Thread.currentThread().getContextClassLoader();
-                InputStream stream = loader.getResourceAsStream("app.properties");
-                props.load(stream);
-                instance = new CustomDataSource(
-                        props.getProperty("postgres.driver"),
-                        props.getProperty("postgres.url"),
-                        props.getProperty("postgres.name"),
-                        props.getProperty("postgres.password"));
-            } catch (IOException ex) {
-                ex.printStackTrace();
-            }
+            ResourceBundle rb = ResourceBundle.getBundle("app");
+            instance = new CustomDataSource(rb.getString("postgres.driver"),
+                    rb.getString("postgres.url"),
+                    rb.getString("postgres.password"),
+                    rb.getString("postgres.name"));
         }
         return instance;
     }
 
     @Override
     public Connection getConnection() throws SQLException {
-        return new CustomConnector().getConnection(this.url, this.name, this.password);
+        return getConnection(name, password);
     }
 
     @Override
     public Connection getConnection(String username, String password) {
-        return new CustomConnector().getConnection(this.url, username, password);
+        try {
+            Class.forName(driver);
+            return DriverManager.getConnection(url, username, password);
+
+        } catch (ClassNotFoundException | SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -71,13 +69,13 @@ public class CustomDataSource implements DataSource {
     }
 
     @Override
-    public void setLoginTimeout(int seconds) throws SQLException {
-
+    public int getLoginTimeout() throws SQLException {
+        return 0;
     }
 
     @Override
-    public int getLoginTimeout() throws SQLException {
-        return 0;
+    public void setLoginTimeout(int seconds) throws SQLException {
+
     }
 
     @Override
