@@ -52,11 +52,11 @@ public class CustomDataSource implements DataSource {
 
     @Override
     public Connection getConnection() throws SQLException {
-        return new CustomConnector().getConnection(this.url);
+        return new CustomConnector().getConnection(this.url, this.name, this.password);
     }
 
     @Override
-    public Connection getConnection(String username, String password) throws SQLException {
+    public Connection getConnection(String username, String password) {
         return new CustomConnector().getConnection(this.url, username, password);
     }
 

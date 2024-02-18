@@ -36,9 +36,10 @@ public class SimpleJDBCRepository {
             ps.setInt(3, user.getAge());
             int affectedRows = ps.executeUpdate();
             if (affectedRows > 0) {
-                ResultSet resultSet = ps.getGeneratedKeys();
-                if (resultSet.next()) {
-                    return resultSet.getLong(1);
+                try (ResultSet generatedKeys = ps.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        return generatedKeys.getLong(1);
+                    }
                 }
             } else return null;
         } catch (SQLException e) {
@@ -57,6 +58,7 @@ public class SimpleJDBCRepository {
             while (rs.next()) {
                 user = new User(rs.getLong("id"), rs.getString("firstname"), rs.getString("lastname"), rs.getInt("age"));
             }
+            connection.close();
             return user;
         } catch (SQLException e) {
             throw new RuntimeException();
@@ -112,7 +114,7 @@ public class SimpleJDBCRepository {
         }
     }
 
-    private void deleteUser(Long userId) {
+    public void deleteUser(Long userId) {
         try {
             connection = CustomDataSource.getInstance().getConnection();
             ps = connection.prepareStatement(DELETE_USER);
